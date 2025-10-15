@@ -18,9 +18,11 @@ from torch import Tensor
 
 # needed due to empty tensor bug in pytorch and torchvision 0.5
 import torchvision
-if float(torchvision.__version__[:3]) < 0.7:
-    from torchvision.ops import _new_empty_tensor
-    from torchvision.ops.misc import _output_size
+from packaging import version
+
+# Check torchvision version properly
+TORCHVISION_VERSION = version.parse(torchvision.__version__)
+USE_OLD_TORCHVISION = TORCHVISION_VERSION < version.parse("0.7.0")
 
 
 class SmoothedValue(object):
@@ -456,14 +458,28 @@ def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corne
     This will eventually be supported natively by PyTorch, and this
     class can go away.
     """
-    if float(torchvision.__version__[:3]) < 0.7:
+    # For modern versions, torchvision.ops.misc.interpolate handles empty tensors correctly
+    if USE_OLD_TORCHVISION:
+        # For old versions, handle empty tensors manually
         if input.numel() > 0:
             return torch.nn.functional.interpolate(
                 input, size, scale_factor, mode, align_corners
             )
-
-        output_shape = _output_size(2, input, size, scale_factor)
-        output_shape = list(input.shape[:-2]) + list(output_shape)
-        return _new_empty_tensor(input, output_shape)
+        else:
+            # Calculate output shape for empty tensor
+            # This is a simplified version that should work for most cases
+            if size is not None:
+                output_shape = list(input.shape[:-2]) + list(size)
+            elif scale_factor is not None:
+                if isinstance(scale_factor, (float, int)):
+                    scale_factor = [scale_factor, scale_factor]
+                output_shape = list(input.shape[:-2]) + [
+                    int(input.shape[-2] * scale_factor[0]),
+                    int(input.shape[-1] * scale_factor[1])
+                ]
+            else:
+                output_shape = list(input.shape)
+            return torch.empty(output_shape, dtype=input.dtype, device=input.device)
     else:
+        # Use modern torchvision interpolate which handles empty tensors
         return torchvision.ops.misc.interpolate(input, size, scale_factor, mode, align_corners)

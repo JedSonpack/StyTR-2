@@ -170,7 +170,11 @@ for content_path in content_paths:
         content = content.to(device).unsqueeze(0)
         
         with torch.no_grad():
-            output= network(content,style)       
+            output = network(content,style)
+            # network returns a tuple (output, loss_c, loss_s, l_identity1, l_identity2)
+            # we only need the first element (the stylized image) for testing
+            if isinstance(output, tuple):
+                output = output[0]
         output = output.cpu()
                 
         output_name = '{:s}/{:s}_stylized_{:s}{:s}'.format(
@@ -179,5 +183,3 @@ for content_path in content_paths:
         )
  
         save_image(output, output_name)
-   
-
