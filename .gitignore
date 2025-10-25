@@ -54,3 +54,14 @@ logs/
 
 # Output images (optional, uncomment if needed)
 # output/
+
+# Datasets (usually too large)
+datasets/
+
+# Experiments output
+experiments/
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
